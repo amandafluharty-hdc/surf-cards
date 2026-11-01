@@ -1,0 +1,62 @@
+name: Refresh surf cards
+
+on:
+  schedule:
+    - cron: "7 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: surf-live
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: Build the cards
+        run: python scripts/build_surf.py
+      - name: Stop if Surfline gave us nothing
+        run: |
+          python - <<'PY'
+          import json, sys
+          spots = json.load(open("surf.json", encoding="utf-8"))
+          ok = sum(1 for s in spots if s.get("rating"))
+          print(f"{ok} of {len(spots)} spots have a rating")
+          print(open("surf_notes.txt", encoding="utf-8").read())
+          sys.exit(0 if ok >= 3 else 1)
+          PY
+      - name: Collect the page
+        run: |
+          mkdir site
+          cp kauai_surf_cards.html site/index.html
+          cp surf.json site/surf.json
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: surf-live/site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
