@@ -28,6 +28,10 @@ from datetime import datetime, timedelta, timezone
 HERE = os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() else os.getcwd()
 BASE = os.path.abspath(os.path.join(HERE, ".."))
 TEMPLATE = os.path.join(HERE, "surf_template", "surf_cards.html")
+MAP_TEMPLATE = os.path.join(HERE, "surf_template", "surf_map.html")
+VENDOR = os.path.join(HERE, "surf_template", "vendor")
+CARTO = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+OSM = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
 SL = "https://services.surfline.com/kbyg/spots/forecasts/"
 NOAA = "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter"
 STATION = "1611400"                                   # Nawiliwili
@@ -303,7 +307,11 @@ def load_spots(path):
                 continue
             spots.append({"id": sid, "name": r["Spot Name"].strip(), "region": r["Region"].strip(),
                           "page": (r.get("applink") or "").strip(), "surfline": (r.get("link") or "").strip(),
-                          "maplink": (r.get("maplink") or ""), "photo": ("https://kauaiconnect.com/wp-content/uploads/" + r["file1"].strip()) if r.get("file1") else ""})
+                          "maplink": (r.get("maplink") or ""), "guide": (r.get("Surf Guide") or "").strip(), "lat": None, "lon": None, "photo": ("https://kauaiconnect.com/wp-content/uploads/" + r["file1"].strip()) if r.get("file1") else ""})
+    for sp in spots:
+        ll = spot_latlon(sp.get("maplink"))
+        if ll:
+            sp["lat"], sp["lon"] = round(ll[0], 5), round(ll[1], 5)
     return spots
 
 
@@ -446,6 +454,30 @@ def render(spots, out, sample=False, note=""):
     print(f"Wrote {out}  ({os.path.getsize(out) / 1e3:.0f} KB)")
 
 
+def render_map(spots, out, tile_key="", sample=False):
+    """Map page: Leaflet inlined, pins coloured by Surfline rating, spot info opens in a panel on the left."""
+    if tile_key:
+        tiles, subs = CARTO + "?key=" + tile_key, "abcd"
+        attr = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+    else:                                              # no key: plain OpenStreetMap tiles still work
+        tiles, subs = OSM, "abc"
+        attr = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    with open(MAP_TEMPLATE, encoding="utf-8") as f:
+        html = f.read()
+    with open(os.path.join(VENDOR, "leaflet.css"), encoding="utf-8") as f:
+        css = f.read()
+    with open(os.path.join(VENDOR, "leaflet.js"), encoding="utf-8") as f:
+        js = f.read().replace("</script", "<\\/script")
+    keep = [{k: v for k, v in sp.items() if k not in ("maplink",)} for sp in spots]
+    data = {"generated": datetime.now(HST).isoformat(), "sample": sample, "spots": keep,
+            "tiles": tiles, "subdomains": subs, "attribution": attr}
+    blob = json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+    html = html.replace("__LEAFLET_CSS__", css).replace("__LEAFLET_JS__", js).replace("__DATA__", blob, 1)
+    with open(out, "w", encoding="utf-8") as f:
+        f.write(html)
+    print(f"Wrote {out}  ({os.path.getsize(out) / 1e3:.0f} KB)" + ("" if tile_key else "  [no CARTO key: using OpenStreetMap tiles]"))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--spots", default=os.path.join(BASE, "surf_spot.csv"))
@@ -454,6 +486,8 @@ def main():
     ap.add_argument("--offline", action="store_true")
     ap.add_argument("--sample", action="store_true")
     ap.add_argument("--debug", action="store_true")
+    ap.add_argument("--map-out", default=os.path.join(BASE, "kauai_surf_map.html"))
+    ap.add_argument("--tile-key", default=os.environ.get("CARTO_BASEMAP_KEY", ""), help="free CARTO basemap key (or set CARTO_BASEMAP_KEY)")
     ap.add_argument("--no-photos", action="store_true", help="leave out the spot photos (thin header instead)")
     a = ap.parse_args()
 
@@ -465,11 +499,19 @@ def main():
     if a.sample:
         sp, note = sample_data(spots, a.json)
         render(sp, a.out, sample=True, note=note)
+        render_map(sp, a.map_out, a.tile_key, sample=True)
         return
     if a.offline:
         with open(a.json, encoding="utf-8") as f:
             spots = fix_old_wind(json.load(f))
+        fresh = {x["id"]: x for x in load_spots(a.spots)}          # coordinates and guide text come from the csv
+        for sp in spots:
+            x = fresh.get(sp["id"], {})
+            for k in ("lat", "lon", "guide", "page", "surfline", "photo"):
+                if x.get(k) is not None and (k not in sp or not sp.get(k)):
+                    sp[k] = x[k]
         render(spots, a.out)
+        render_map(spots, a.map_out, a.tile_key)
         return
     spots, notes = fetch_all(spots, a.debug)
     with open(a.json, "w", encoding="utf-8") as f:
@@ -483,6 +525,7 @@ def main():
     if not ok:
         print("Nothing could be read. Run again with --debug and send me surf_raw.json (or the messages above).")
     render(spots, a.out)
+    render_map(spots, a.map_out, a.tile_key)
 
 
 if __name__ == "__main__":
