@@ -57,6 +57,15 @@ dd span{display:block;color:var(--slate);font-size:13px}
 footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--line);font-size:13.5px;font-weight:600;margin-top:auto}
 footer a{color:var(--accent);text-decoration:none}
 footer a:hover{text-decoration:underline}
+.rates{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px;align-items:center}
+.rate{display:inline-flex;align-items:center;gap:7px;border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:5px 12px 5px 8px;font:inherit;font-size:13px;font-weight:700;letter-spacing:.02em;cursor:pointer;min-height:34px;color:var(--ink)}
+.rate i{width:14px;height:14px;border-radius:50%;display:inline-block}
+.rate em{font-style:normal;font-weight:600;color:var(--slate);font-size:12px}
+.rate[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+.rate[aria-pressed=true] em{color:#cfd8da}
+.rate[disabled]{opacity:.4;cursor:default}
+.rates .clr{border:0;background:none;font:inherit;font-size:13px;color:var(--slate);text-decoration:underline;cursor:pointer;padding:6px 4px}
+.empty{grid-column:1/-1;color:var(--slate);padding:18px 4px}
 .credit{margin-top:22px;color:var(--slate);font-size:12.5px;max-width:78ch}
 .credit a{color:var(--slate)}
 @media (max-width:520px){.grid{grid-template-columns:1fr}}
@@ -68,6 +77,7 @@ footer a:hover{text-decoration:underline}
   <div class="chips" id="chips" role="group" aria-label="Filter by region"></div>
   <label class="tools">Sort <select id="sort"><option value="best">Best conditions</option><option value="region">By region</option><option value="az">A to Z</option></select></label>
 </div>
+<div class="rates" id="rates" role="group" aria-label="Filter by rating"></div>
 <p class="stamp" id="stamp"></p>
 <div class="stale" id="stale" role="status"></div>
 <div class="sample" id="sample" role="status"></div>
@@ -121,20 +131,28 @@ function card(s){
    +'<footer>'+(s.page?'<a href="'+esc(s.page)+'" target="_top">Spot guide</a>':'<span></span>')+'<a href="'+esc(s.surfline)+'" target="_blank" rel="noopener">Full report on Surfline ↗</a></footer></div></article>';
 }
 
-var S={region:'All',sort:'best'};
+var S={region:'All',sort:'best',rates:{}};
+function rkey(s){var L=s.rating?level(s.rating.key):null;if(!L)return 'NONE';return L.s.k==='GOOD_TO_EPIC'?'GOOD':L.s.k;}
 var REG=['All'].concat(KC.regions);
 function score(s){var L=s.rating?level(s.rating.key):null;return L?L.i:-2;}
 function render(){
-  var list=KC.spots.filter(function(s){return S.region==='All'||s.region===S.region;});
+  var base=KC.spots.filter(function(s){return S.region==='All'||s.region===S.region;});
+  var any=Object.keys(S.rates).some(function(k){return S.rates[k];});
+  var list=base.filter(function(s){return !any||S.rates[rkey(s)];});
   list.sort(function(a,b){
     if(S.sort==='az')return a.name.localeCompare(b.name);
     if(S.sort==='region')return KC.regions.indexOf(a.region)-KC.regions.indexOf(b.region)||a.name.localeCompare(b.name);
     return score(b)-score(a)||a.name.localeCompare(b.name);
   });
-  $('#grid').innerHTML=list.map(card).join('');
+  $('#grid').innerHTML=list.length?list.map(card).join(''):'<p class="empty">No spots match that rating right now. Clear the rating filter to see them all.</p>';
+  var cnt={};base.forEach(function(s){var k=rkey(s);cnt[k]=(cnt[k]||0)+1;});
+  var rh=SCALE.concat([FLAT]).map(function(l){var n=cnt[l.k]||0;var on=!!S.rates[l.k];return '<button type="button" class="rate" data-k="'+l.k+'" aria-pressed="'+on+'"'+((!n&&!on)?' disabled':'')+'><i style="background:'+l.c+'"></i>'+esc(l.t.charAt(0)+l.t.slice(1).toLowerCase())+' <em>'+n+'</em></button>';}).join('');
+  if(any)rh+='<button type="button" class="clr" data-k="__clear">Clear rating filter</button>';
+  $('#rates').innerHTML=rh;
   $('#chips').innerHTML=REG.map(function(r){return '<button type="button" class="chip" data-r="'+esc(r)+'" aria-pressed="'+(S.region===r)+'">'+esc(r)+'</button>';}).join('');
 }
 $('#chips').addEventListener('click',function(e){var b=e.target.closest('.chip');if(!b)return;S.region=b.dataset.r;render();});
+$('#rates').addEventListener('click',function(e){var b=e.target.closest('button');if(!b||b.disabled)return;if(b.dataset.k==='__clear')S.rates={};else S.rates[b.dataset.k]=!S.rates[b.dataset.k];render();});
 $('#sort').addEventListener('change',function(e){S.sort=e.target.value;render();});
 function stamp(){
   var g=new Date(KC.generated),ago=(Date.now()-g.getTime())/36e5;
