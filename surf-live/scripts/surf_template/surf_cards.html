@@ -163,6 +163,10 @@ function stamp(){
   if(KC.sample){$('#sample').textContent=KC.sampleNote||'Preview with sample numbers.';$('#sample').classList.add('on');}
 }
 stamp();render();
+/* tell the page that embeds us how tall we are, so it can size the frame and no inner scrollbar appears */
+function tell(){try{parent.postMessage({kcSurf:Math.ceil(document.documentElement.scrollHeight)},'*');}catch(e){}}
+if(window.ResizeObserver){new ResizeObserver(tell).observe(document.body);}
+window.addEventListener('load',tell);window.addEventListener('resize',tell);tell();
 })();
 </script>
 </body>
