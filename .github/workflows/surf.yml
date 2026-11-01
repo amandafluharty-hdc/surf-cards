@@ -30,6 +30,8 @@ jobs:
           python-version: "3.12"
       - run: pip install requests
       - name: Build the cards
+        env:
+          CARTO_BASEMAP_KEY: ${{ secrets.CARTO_BASEMAP_KEY }}
         run: python scripts/build_surf.py
       - name: Stop if Surfline gave us nothing
         run: |
@@ -43,9 +45,10 @@ jobs:
           PY
       - name: Collect the page
         run: |
-          mkdir site
+          mkdir -p site/map
           cp kauai_surf_cards.html site/index.html
           cp surf.json site/surf.json
+          cp kauai_surf_map.html site/map/index.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
