@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kauaʻi surf reports | Kauaʻi Connect</title>
+<style>
+:root{--ink:#19262B;--slate:#566A71;--line:#D5DFE0;--glass:#F2F6F6;--paper:#fff;--accent:#0E6E7E}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font:15px/1.45 "Avenir Next","Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",sans-serif;color:var(--ink);background:var(--paper);padding:4px 2px 28px}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.bar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between;margin:0 0 16px}
+.chips{display:flex;gap:7px;flex-wrap:wrap}
+.chip{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;font:inherit;font-weight:600;font-size:13.5px;cursor:pointer;min-height:36px}
+.chip[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+.tools{display:flex;gap:12px;align-items:center;color:var(--slate);font-size:13px}
+.tools select{height:36px;border:1.5px solid var(--line);border-radius:10px;padding:0 10px;font:inherit;color:var(--ink);background:#fff}
+.stamp{color:var(--slate);font-size:13px;margin:0 0 14px}
+.stale{display:none;margin:0 0 14px;padding:10px 14px;border-radius:12px;background:#FFF4D6;border:1px solid #F0CE4E;font-size:13.5px}
+.stale.on{display:block}
+.sample{display:none;margin:0 0 14px;padding:10px 14px;border-radius:12px;background:#E8F1F3;border:1px dashed var(--accent);font-size:13.5px}
+.sample.on{display:block}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:18px}
+.card{--r:#B8C0C4;background:var(--paper);border:1px solid var(--line);border-radius:18px;overflow:hidden;display:flex;flex-direction:column;position:relative}
+.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--r);z-index:2}
+.ph{aspect-ratio:16/7;background:#111;position:relative;overflow:hidden}
+.ph .pi{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.card.nop .ph{aspect-ratio:auto;height:52px}
+.ph .rg{z-index:1;position:absolute;left:18px;bottom:10px;background:rgba(255,255,255,.94);border-radius:999px;padding:3px 11px;font-size:12.5px;font-weight:650}
+.body{padding:16px 18px 14px 22px;display:flex;flex-direction:column;gap:12px;flex:1}
+h3{margin:0;font-size:19px;line-height:1.2;letter-spacing:-.01em}
+h3 a{text-decoration:none}
+h3 a:hover{text-decoration:underline}
+.rating{display:flex;align-items:center;gap:6px 14px;flex-wrap:wrap}
+.rw{font-size:24px;font-weight:800;letter-spacing:.005em;line-height:1;color:var(--r)}
+.spec{display:flex;gap:4px;flex:none}
+.spec i{width:28px;height:8px;border-radius:2px;background:#E3E7E9}
+.surf{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.surf .big{font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1}
+.surf .big small{font-size:17px;font-weight:700;margin-left:3px}
+.surf .rel{color:var(--slate);font-weight:600}
+.nosurf{color:var(--slate);font-size:14px}
+dl{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;margin:0}
+dl div{min-width:0}
+dt{color:var(--slate);font-size:12.5px;font-weight:600;margin-bottom:1px}
+dd{margin:0}
+dd b{font-size:15.5px;font-weight:700}
+dd span{display:block;color:var(--slate);font-size:13px}
+.swells{list-style:none;margin:0;padding:10px 0 0;border-top:1px solid var(--line);display:grid;gap:5px}
+.swells li{display:grid;grid-template-columns:20px 62px 40px 1fr;gap:8px;align-items:center;font-size:14px}
+.swells .ar{display:inline-block;width:16px;height:16px;color:var(--slate)}
+.swells b{font-weight:700}
+.swells .d{color:var(--slate)}
+.na{color:var(--slate);font-size:14px;padding:6px 0}
+footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--line);font-size:13.5px;font-weight:600;margin-top:auto}
+footer a{color:var(--accent);text-decoration:none}
+footer a:hover{text-decoration:underline}
+.credit{margin-top:22px;color:var(--slate);font-size:12.5px;max-width:78ch}
+.credit a{color:var(--slate)}
+@media (max-width:520px){.grid{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="bar">
+  <div class="chips" id="chips" role="group" aria-label="Filter by region"></div>
+  <label class="tools">Sort <select id="sort"><option value="best">Best conditions</option><option value="region">By region</option><option value="az">A to Z</option></select></label>
+</div>
+<p class="stamp" id="stamp"></p>
+<div class="stale" id="stale" role="status"></div>
+<div class="sample" id="sample" role="status"></div>
+<div class="grid" id="grid"></div>
+<p class="credit">Surf, swell, wind and rating come from <a href="https://www.surfline.com" target="_blank" rel="noopener">Surfline</a>. Where Surfline gives no swell lines, swell comes from NOAA buoys. Tide and water temperature come from <a href="https://tidesandcurrents.noaa.gov" target="_blank" rel="noopener">NOAA</a> (Nawiliwili station). Conditions change quickly and the ocean is unpredictable. Check the water yourself before you go in.</p>
+<script>
+const KC = {"generated":"2026-11-01T08:10:54.876247-10:00","sample":false,"sampleNote":"","regions":["North","East","Lihue","South","West"],"spots":[{"id":"5842041f4e65fad6a7708b30","name":"Poipu Outer Reef","region":"South","page":"https://kauaiconnect.com/surf-spot/poipu-outer-reef/","surfline":"https://www.surfline.com/surf-report/poipu-outer-reef/5842041f4e65fad6a7708b30","maplink":"https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d3702.624891518718!2d-159.4645749247198!3d21.87199997999679!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMjHCsDUyJzE5LjIiTiAxNTnCsDI3JzQzLjIiVw!5e0!3m2!1sen!2sus!4v1714433523309!5m2!1sen!2sus","photo":"https://kauaiconnect.com/wp-content/uploads/5842041f4e65fad6a7708b30_1.jpg","rating":{"key":"FAIR","value":3},"surf":{"min":4,"max":6,"plus":false,"rel":"Chest to overhead"},"swells":[{"h":3,"p":12,"dir":190.5},{"h":1.8,"p":16,"dir":185.7},{"h":0.7,"p":5,"dir":138.3}],"wind":{"speed":18.5,"dir":36.47489,"type":"Offshore","gust":29.2,"unit":"kts","src_unit":"KTS"},"air":76.62204,"cond":"Clear","tide":{"height":1.9,"trend":"rising","next":{"type":"H","time":"2026-11-01T09:38:00-10:00","height":2.0}},"water":80},{"id":"5842041f4e65fad6a7708b31","name":"Pakala","region":"West","page":"https://kauaiconnect.com/surf-spot/pakala","surfline":"https://www.surfline.com/surf-report/pakala/5842041f4e65fad6a7708b31","maplink":"https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d3700.962319529014!2d-159.65457492471793!3d21.935999979950207!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMjHCsDU2JzA5LjYiTiAxNTnCsDM5JzA3LjIiVw!5e0!3m2!1sen!2sus!4v1714433559255!5m2!1sen!2sus","photo":"https://kauaiconnect.com/wp-content/uploads/5842041f4e65fad6a7708b31_1.jpg","rating":{"key":"POOR_TO_FAIR","value":2},"surf":{"min":2,"max":3,"plus":true,"rel":"Thigh to stomach"},"swells":[{"h":3.1,"p":12,"dir":183.9},{"h":1.7,"p":15,"dir":189.3},{"h":3.3,"p":17,"dir":312.8}],"wind":{"speed":5.2,"dir":354.80454,"type":"Cross-shore","gust":14.0,"unit":"kts","src_unit":"KTS"},"air":80.38404,"cond":"Clear","tide":{"height":1.9,"trend":"rising","next":{"type":"H","time":"2026-11-01T09:38:00-10:00","height":2.0}},"water":80},{"id":"584204214e65fad6a7709bde","name":"PKs/Centers","region":"South","page":"https://kauaiconnect.com/surf-spot/pks-centers","surfline":"https://www.surfline.com/surf-report/pks-centers/584204214e65fad6a7709bde","maplink":"https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d3702.410131662508!2d-159.47735492471958!3d21.880277079990865!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMjHCsDUyJzQ5LjAiTiAxNTnCsDI4JzI5LjIiVw!5e0!3m2!1sen!2sus!4v1714433902983!5m2!1sen!2sus","photo":"https://kauaiconnect.com/wp-content/uploads/584204214e65fad6a7709bde_1.jpg","rating":{"key":"FAIR","value":3},"surf":{"min":3,"max":4,"plus":false,"rel":"Waist to chest"},"swells":[{"h":3,"p":12,"dir":190.5},{"h":1.8,"p":16,"dir":185.7},{"h":0.7,"p":5,"dir":138.3}],"wind":{"speed":18.5,"dir":36.47489,"type":"Offshore","gust":29.2,"unit":"kts","src_unit":"KTS"},"air":76.62204,"cond":"Clear","tide":{"height":1.9,"trend":"rising","next":{"type":"H","time":"2026-11-01T09:38:00-10:00","height":2.0}},"water":80},{"id":"5842041f4e65fad6a7708b2d","name":"Ha'ena Bay (Cannons/Tunnels)","region":"North","page":"https://kauaiconnect.com/surf-spot/haena-bay-cannons-tunnels","surfline":"https://www.surfline.com/surf-report/ha-ena-bay-cannons-tunnels-/5842041f4e65fad6a7708b2d","maplink":"https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d3693.397292464296!2d-159.56957492470963!3d22.224999979740858!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMjLCsDEzJzMwLjAiTiAxNTnCsDM0JzAxLjIiVw!5e0!3m2!1sen!2sus!4v1714433309598!5m2!1sen!2sus","photo":"https://kauaiconnect.com/wp-content/uploads/5842041f4e65fad6a7708b2d_1.jpg","rating":{"key":"FAIR","value":3},"surf":{"min":8,"max":10,"plus":false,"rel":"2x overhead"},"swells":[{"h":6.4,"p":17,"dir":319.3},{"h":3.9,"p":8,"dir":44.3},{"h":1,"p":12,"dir":72.8}],"wind":{"speed":11.4,"dir":95.296,"type":"Cross-shore","gust":16.1,"unit":"kts","src_unit":"KTS"},"air":75.25404,"cond":"Drizzle","tide":{"height":1.9,"trend":"rising","next":{"type":"H","time":"2026-11-01T09:38:00-10:00","height":2.0}},"water":80},{"id":"5842041f4e65fad6a7708b2c","name":"Hanalei Bay","region":"North","page":"https://kauaiconnect.com/surf-spot/hanalei-bay","surfline":"https://www.surfline.com/surf-report/hanalei-bay/5842041f4e65fad6a7708b2c","maplink":"https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d3693.6343001357136!2d-159.50457492470994!3d22.215999979747302!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMjLCsDEyJzU3LjYiTiAxNTnCsDMwJzA3LjIiVw!5e0!3m2!1sen!2sus!4v1714433404869!5m2!1sen!2sus","photo":"https://kauaiconnect.com/wp-content/uploads/5842041f4e65fad6a7708b2c_1.jpg","rating":{"key":"FAIR","value":3},"surf":{"min":6,"max":8,"plus":false,"rel":"Overhead to well overhead"},"swells":[{"h":6.4,"p":17,"dir":319.6},{"h":3.9,"p":8,"dir":45.2},{"h":1,"p":12,"dir":76.7}],"wind":{"speed":8.4,"dir":73.93178,"type":"Offshore","gust":14.8,"unit":"kts","src_unit":"KTS"},"air":75.03804,"cond":"Light rain","tide":{"height":1.9,"trend":"rising","next":{"type":"H","time":"2026-11-01T09:38:00-10:00","height":2.0}},"water":80},{"id":"5842041f4e65fad6a7708df1","name":"Polihale","region":"West","page":"https://kauaiconnect.com/surf-spot/polihale","surfline":"https://www.surfline.com/surf-report/polihale/5842041f4e65fad6a7708df1","maplink":"https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d3696.6547071883356!2d-159.74957492471324!3d22.100999979830423!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMjLCsDA2JzAzLjYiTiAxNTnCsDQ0JzQ5LjIiVw!5e0!3m2!1sen!2sus!4v1714434010938!5m2!1sen!2sus","photo":"https://kauaiconnect.com/wp-content/uploads/5842041f4e65fad6a7708df1_1.jpg","rating":{"key":"POOR_TO_FAIR","value":2},"surf":{"min":6,"max":8,"plus":false,"rel":"Overhead to well overhead"},"swells":[{"h":6.3,"p":17,"dir":320.2},{"h":3.1,"p":8,"dir":24.5},{"h":2.4,"p":12,"dir":188.3}],"wind":{"speed":10.0,"dir":20.27044,"type":"Cross-shore","gust":18.3,"unit":"kts","src_unit":"KTS"},"air":75.43404,"cond":"Clear","tide":{"height":1.9,"trend":"rising","next":{"type":"H","time":"2026-11-01T09:38:00-10:00","height":2.0}},"water":80},{"id":"640f37e374a71b7f86295289","name":"Shipwrecks","region":"South","page":"https://kauaiconnect.com/surf-spot/shipwrecks","surfline":"https://www.surfline.com/surf-report/shipwrecks/640f37e374a71b7f86295289","maplink":"https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d3702.5730060620654!2d-159.43977492471979!3d21.873999979995293!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMjHCsDUyJzI2LjQiTiAxNTnCsDI2JzEzLjkiVw!5e0!3m2!1sen!2sus!4v1714433954603!5m2!1sen!2sus","photo":"https://kauaiconnect.com/wp-content/uploads/640f37e374a71b7f86295289_1.jpg","rating":{"key":"POOR_TO_FAIR","value":2},"surf":{"min":3,"max":4,"plus":false,"rel":"Waist to chest"},"swells":[{"h":2.3,"p":12,"dir":184.5},{"h":1.8,"p":16,"dir":185},{"h":1.8,"p":9,"dir":200.7}],"wind":{"speed":19.8,"dir":32.28688,"type":"Offshore","gust":28.0,"unit":"kts","src_unit":"KTS"},"air":76.83804,"cond":"Clear","tide":{"height":1.9,"trend":"rising","next":{"type":"H","time":"2026-11-01T09:38:00-10:00","height":2.0}},"water":80},{"id":"640f37ef326c179b795b7627","name":"Kalapaki Beach","region":"Lihue","page":"https://kauaiconnect.com/surf-spot/kalapaki-beach","surfline":"https://www.surfline.com/surf-report/kalapaki-beach/640f37ef326c179b795b7627","maplink":"https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d3700.3351853191434!2d-159.3528449247173!3d21.96009517993274!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMjHCsDU3JzM2LjMiTiAxNTnCsDIxJzAxLjAiVw!5e0!3m2!1sen!2sus!4v1714434063084!5m2!1sen!2sus","photo":"https://kauaiconnect.com/wp-content/uploads/640f37ef326c179b795b7627_1.jpg","rating":{"key":"FAIR","value":3},"surf":{"min":2,"max":3,"plus":true,"rel":"Thigh to stomach"},"swells":[{"h":1.8,"p":16,"dir":183.8},{"h":2,"p":12,"dir":177.2},{"h":1.5,"p":9,"dir":190.5}],"wind":{"speed":14.0,"dir":30.13064,"type":"Offshore","gust":16.7,"unit":"kts","src_unit":"KTS"},"air":76.72332,"cond":"Light showers","tide":{"height":1.9,"trend":"rising","next":{"type":"H","time":"2026-11-01T09:38:00-10:00","height":2.0}},"water":80},{"id":"5842041f4e65fad6a7708b2f","name":"Anahola Bay","region":"East","page":"https://kauaiconnect.com/surf-spot/anahola-bay","surfline":"https://www.surfline.com/surf-report/anahola-bay/5842041f4e65fad6a7708b2f","maplink":"https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d3695.4220787210356!2d-159.303574924712!3d22.14799997979632!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMjLCsDA4JzUyLjgiTiAxNTnCsDE4JzAzLjYiVw!5e0!3m2!1sen!2sus!4v1714433446030!5m2!1sen!2sus","photo":"https://kauaiconnect.com/wp-content/uploads/5842041f4e65fad6a7708b2f_1.jpg","rating":{"key":"POOR_TO_FAIR","value":2},"surf":{"min":3,"max":4,"plus":false,"rel":"Waist to chest"},"swells":[{"h":4.5,"p":8,"dir":54.9},{"h":6.1,"p":17,"dir":321},{"h":2.2,"p":12,"dir":173.8}],"wind":{"speed":10.0,"dir":24.72252,"type":"Onshore","gust":17.9,"unit":"kts","src_unit":"KTS"},"air":74.22804,"cond":"Overcast","tide":{"height":1.9,"trend":"rising","next":{"type":"H","time":"2026-11-01T09:38:00-10:00","height":2.0}},"water":80},{"id":"5a9db1d0a7eda2001a6aad6b","name":"Kealia","region":"East","page":"https://kauaiconnect.com/surf-spot/kealia","surfline":"https://www.surfline.com/surf-report/kealia/5a9db1d0a7eda2001a6aad6b","maplink":"https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d3696.781751904884!2d-159.3058592247134!3d22.09615037983389!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMjLCsDA1JzQ2LjEiTiAxNTnCsDE4JzExLjgiVw!5e0!3m2!1sen!2sus!4v1714433485274!5m2!1sen!2sus","photo":"https://kauaiconnect.com/wp-content/uploads/5a9db1d0a7eda2001a6aad6b_1.jpg","rating":{"key":"POOR","value":1},"surf":{"min":2,"max":3,"plus":false,"rel":"Thigh to waist"},"swells":[{"h":3.6,"p":8,"dir":41.6},{"h":2,"p":5,"dir":101.5},{"h":1.8,"p":12,"dir":173.3}],"wind":{"speed":10.8,"dir":23.702,"type":"Onshore","gust":18.3,"unit":"kts","src_unit":"KTS"},"air":74.89404,"cond":"Overcast","tide":{"height":1.9,"trend":"rising","next":{"type":"H","time":"2026-11-01T09:38:00-10:00","height":2.0}},"water":80},{"id":"640f37d874a71b18f7294fe3","name":"Kauapea Beach","region":"North","page":"https://kauaiconnect.com/surf-spot/kauapea-beach","surfline":"https://www.surfline.com/surf-report/kauapea-beach/640f37d874a71b18f7294fe3","maplink":"https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d3693.4183635031914!2d-159.41237492470964!3d22.22419997974147!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMjLCsDEzJzI3LjEiTiAxNTnCsDI0JzM1LjMiVw!5e0!3m2!1sen!2sus!4v1714434105272!5m2!1sen!2sus","photo":"https://kauaiconnect.com/wp-content/uploads/640f37d874a71b18f7294fe3_1.jpg","rating":{"key":"FAIR","value":3},"surf":{"min":6,"max":8,"plus":false,"rel":"Overhead to well overhead"},"swells":[{"h":5.5,"p":17,"dir":323.8},{"h":4,"p":8,"dir":48.9}],"wind":{"speed":11.4,"dir":60.56084,"type":"Cross-shore","gust":15.4,"unit":"kts","src_unit":"KTS"},"air":77.16204,"cond":"Overcast","tide":{"height":1.9,"trend":"rising","next":{"type":"H","time":"2026-11-01T09:38:00-10:00","height":2.0}},"water":80},{"id":"5842041f4e65fad6a7708df3","name":"Mana Point","region":"West","page":"https://kauaiconnect.com/surf-spot/mana-point","surfline":"https://www.surfline.com/surf-report/mana-point/5842041f4e65fad6a7708df3","maplink":"https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d3698.955917821849!2d-159.78757492471584!3d22.012999979894115!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMjLCsDAwJzQ2LjgiTiAxNTnCsDQ3JzA2LjAiVw!5e0!3m2!1sen!2sus!4v1714434141468!5m2!1sen!2sus","photo":"https://kauaiconnect.com/wp-content/uploads/5842041f4e65fad6a7708df3_1.jpg","rating":{"key":"FAIR","value":3},"surf":{"min":4,"max":6,"plus":false,"rel":"Chest to overhead"},"swells":[{"h":6.1,"p":17,"dir":320.9},{"h":2.9,"p":12,"dir":182.6},{"h":1.5,"p":15,"dir":187.6}],"wind":{"speed":8.2,"dir":342.11943,"type":"Cross-shore","gust":9.1,"unit":"kts","src_unit":"KTS"},"air":79.91604,"cond":"Clear","tide":{"height":1.9,"trend":"rising","next":{"type":"H","time":"2026-11-01T09:38:00-10:00","height":2.0}},"water":80}]};
+(function(){
+'use strict';
+/* Surfline's own rating scale. Colours sampled from their scale graphic; n = filled bars out of 5. */
+var SCALE=[
+ {k:'VERY_POOR',   t:'VERY POOR',   c:'#D5586D', n:1},
+ {k:'POOR',        t:'POOR',        c:'#E69938', n:2},
+ {k:'POOR_TO_FAIR',t:'POOR TO FAIR',c:'#EFCD4E', n:3},
+ {k:'FAIR',        t:'FAIR',        c:'#74D27D', n:4},
+ {k:'FAIR_TO_GOOD',t:'FAIR TO GOOD',c:'#4F9073', n:5},
+ {k:'GOOD',        t:'GOOD',        c:'#6D57EC', n:5},
+ {k:'EPIC',        t:'EPIC',        c:'#5E2ABF', n:5}
+];
+var FLAT={k:'FLAT',t:'FLAT',c:'#8B9499',n:0};
+var ALIAS={GOOD_TO_EPIC:{i:5.5,s:{k:'GOOD_TO_EPIC',t:'GOOD TO EPIC',c:'#6D57EC',n:5}}};
+var $=function(s){return document.querySelector(s);};
+var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+var DIRS=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+var compass=function(d){return (d==null||isNaN(d))?'':DIRS[Math.round(((d%360)+360)%360/22.5)%16];};
+var num=function(v,dp){return (v==null||isNaN(v))?'':(+v).toFixed(dp==null?0:dp).replace(/\.0$/,'');};
+function level(key){for(var i=0;i<SCALE.length;i++)if(SCALE[i].k===key)return {i:i,s:SCALE[i]};if(key==='FLAT')return {i:-1,s:FLAT};if(ALIAS[key])return ALIAS[key];return {i:-0.5,s:{k:key,t:String(key).replace(/_/g,' '),c:'#8B9499',n:0}};}
+var arrow='<svg class="ar" viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(%ddeg)"><path d="M12 3v15M6 12l6 7 6-7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function tfmt(iso){if(!iso)return '';var d=new Date(iso);return new Intl.DateTimeFormat('en-US',{timeZone:'Pacific/Honolulu',hour:'numeric',minute:'2-digit'}).format(d).replace(' AM',' am').replace(' PM',' pm');}
+
+function card(s){
+  var L=s.rating?level(s.rating.key):null, col=L?L.s.c:'#8B9499', word=L?L.s.t:'No rating';
+  var spec='';
+  if(L){for(var b=0;b<5;b++)spec+='<i'+(b<L.s.n?' style="background:'+L.s.c+'"':'')+'></i>';}
+  var surf='';
+  if(s.surf&&s.surf.min!=null){var rng=(s.surf.min===s.surf.max)?num(s.surf.max):num(s.surf.min)+'–'+num(s.surf.max);surf='<div class="surf"><span class="big">'+rng+(s.surf.plus?'+':'')+'<small>ft</small></span><span class="rel">'+esc(s.surf.rel||'')+'</span></div>';}
+  if(!surf)surf='<div class="nosurf">Surf height unavailable right now. See the full report on Surfline.</div>';
+  var w='';
+  if(s.wind&&s.wind.speed!=null){w='<div><dt>Wind</dt><dd><b>'+num(s.wind.speed)+' '+esc(s.wind.unit||'kts')+' '+esc(compass(s.wind.dir))+'</b><span>'+esc(s.wind.type||'')+(s.wind.gust!=null?(s.wind.type?', ':'')+'gusts '+num(s.wind.gust):'')+'</span></dd></div>';}
+  var t='';
+  if(s.tide&&s.tide.height!=null){t='<div><dt>Tide</dt><dd><b>'+num(s.tide.height,1)+' ft '+(s.tide.trend==='rising'?'↑ rising':s.tide.trend==='falling'?'↓ falling':'')+'</b>'+(s.tide.next?'<span>'+(s.tide.next.type==='H'?'High':'Low')+' '+esc(tfmt(s.tide.next.time))+', '+num(s.tide.next.height,1)+' ft</span>':'')+'</dd></div>';}
+  var wt=(s.water!=null)?'<div><dt>Water</dt><dd><b>'+num(s.water)+'°F</b></dd></div>':'';
+  var air=(s.air!=null)?'<div><dt>Air</dt><dd><b>'+num(s.air)+'°F</b><span>'+esc(s.cond||'')+'</span></dd></div>':'';
+  var grid=(w||t||wt||air)?'<dl>'+w+t+wt+air+'</dl>':'';
+  var sw='';
+  if(s.swells&&s.swells.length){sw='<ul class="swells" aria-label="Swells">';s.swells.slice(0,3).forEach(function(x){if(!x||!x.h)return;sw+='<li>'+arrow.replace('%d',Math.round(x.dir||0))+'<b>'+num(x.h,1)+' ft</b><span>'+num(x.p)+'s</span><span class="d">'+esc(compass(x.dir))+' '+num(x.dir)+'°</span></li>';});if(s.swell_src){var bt=new Date(s.swell_src.time*1000).toLocaleTimeString('en-US',{timeZone:'Pacific/Honolulu',hour:'numeric',minute:'2-digit'});sw+='<li class="src" style="display:block;font-size:12px;color:var(--slate)">Swell from '+esc(s.swell_src.name)+' (NOAA), '+bt+'</li>';}sw+='</ul>';}
+  var none=(!s.rating&&!s.surf)?'<p class="na">The report is unavailable right now. Try the full report on Surfline.</p>':'';
+  var img=s.photo?'<div class="ph"><img class="pi" src="'+esc(s.photo)+'" alt="" loading="lazy" onerror="this.closest(\'.card\').classList.add(\'nop\');this.remove()"><span class="rg">'+esc(s.region)+'</span></div>':'<div class="ph"><span class="rg">'+esc(s.region)+'</span></div>';
+  return '<article class="card'+(s.photo?'':' nop')+'" style="--r:'+col+'">'+img+'<div class="body"><h3>'+(s.page?'<a href="'+esc(s.page)+'" target="_top">'+esc(s.name)+'</a>':esc(s.name))+'</h3>'
+   +'<div class="rating"><div class="rw">'+esc(word)+'</div><div class="spec" aria-hidden="true">'+spec+'</div></div>'+surf+grid+sw+none
+   +'<footer>'+(s.page?'<a href="'+esc(s.page)+'" target="_top">Spot guide</a>':'<span></span>')+'<a href="'+esc(s.surfline)+'" target="_blank" rel="noopener">Full report on Surfline ↗</a></footer></div></article>';
+}
+
+var S={region:'All',sort:'best'};
+var REG=['All'].concat(KC.regions);
+function score(s){var L=s.rating?level(s.rating.key):null;return L?L.i:-2;}
+function render(){
+  var list=KC.spots.filter(function(s){return S.region==='All'||s.region===S.region;});
+  list.sort(function(a,b){
+    if(S.sort==='az')return a.name.localeCompare(b.name);
+    if(S.sort==='region')return KC.regions.indexOf(a.region)-KC.regions.indexOf(b.region)||a.name.localeCompare(b.name);
+    return score(b)-score(a)||a.name.localeCompare(b.name);
+  });
+  $('#grid').innerHTML=list.map(card).join('');
+  $('#chips').innerHTML=REG.map(function(r){return '<button type="button" class="chip" data-r="'+esc(r)+'" aria-pressed="'+(S.region===r)+'">'+esc(r)+'</button>';}).join('');
+}
+$('#chips').addEventListener('click',function(e){var b=e.target.closest('.chip');if(!b)return;S.region=b.dataset.r;render();});
+$('#sort').addEventListener('change',function(e){S.sort=e.target.value;render();});
+function stamp(){
+  var g=new Date(KC.generated),ago=(Date.now()-g.getTime())/36e5;
+  var f=new Intl.DateTimeFormat('en-US',{timeZone:'Pacific/Honolulu',weekday:'short',hour:'numeric',minute:'2-digit'}).format(g).replace(' AM',' am').replace(' PM',' pm');
+  $('#stamp').textContent='Updated '+f+' Hawaiʻi time';
+  var st=$('#stale');
+  if(!KC.sample&&ago>2.5){st.textContent='These conditions are about '+Math.round(ago)+' hours old. Open the full report on Surfline for the latest.';st.classList.add('on');}
+  if(KC.sample){$('#sample').textContent=KC.sampleNote||'Preview with sample numbers.';$('#sample').classList.add('on');}
+}
+stamp();render();
+})();
+</script>
+</body>
+</html>
