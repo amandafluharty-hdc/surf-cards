@@ -2,9 +2,14 @@
 # Usage:  powershell -ExecutionPolicy Bypass -File refresh_surf.ps1 [-Repo "C:\path\to\surf-cards"]
 # Optional: set a Windows user environment variable CARTO_BASEMAP_KEY (same value as the old GitHub secret).
 
-param([string]$Repo = "$env:USERPROFILE\surf-cards")
+param([string]$Repo = "$env:USERPROFILE\surf-cards", [string]$Python = "")
 
 $ErrorActionPreference = "Continue"
+# Task Scheduler does not load Anaconda's PATH, so look for Anaconda's python.exe first.
+if (-not $Python) {
+    $ana = Join-Path $env:USERPROFILE "anaconda3\python.exe"
+    if (Test-Path $ana) { $Python = $ana } else { $Python = "python" }
+}
 $env:PYTHONIOENCODING = "utf-8"
 Set-Location $Repo
 $log = Join-Path $Repo "refresh_surf.log"
@@ -17,7 +22,7 @@ Log "---- run start"
 git pull --rebase --autostash 2>&1 | ForEach-Object { Log $_ }
 if ($LASTEXITCODE -ne 0) { Log "git pull failed - stopping"; exit 1 }
 
-python surf-live\scripts\build_surf.py 2>&1 | ForEach-Object { Log $_ }
+& $Python surf-live\scripts\build_surf.py 2>&1 | ForEach-Object { Log $_ }
 if ($LASTEXITCODE -ne 0) { Log "build_surf.py failed - stopping (site keeps last good version)"; exit 1 }
 
 # same safety check the workflow had: don't publish empty cards
