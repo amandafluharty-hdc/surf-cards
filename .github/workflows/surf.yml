@@ -1,11 +1,14 @@
-name: Refresh surf cards
+name: Publish surf cards
+
+# The cards are now BUILT on Amanda's computer (refresh_surf.ps1), because Surfline blocks GitHub's servers (HTTP 403).
+# This workflow only publishes whatever was pushed to surf-live/site. It never contacts Surfline.
 
 on:
-  schedule:
-    - cron: "23,53 * * * *"
-  workflow_dispatch:
   push:
     branches: [main]
+    paths:
+      - "surf-live/site/**"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -16,50 +19,17 @@ concurrency:
   group: pages
   cancel-in-progress: true
 
-defaults:
-  run:
-    working-directory: surf-live
-
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: pip install requests
-      - name: Build the cards
-        env:
-          CARTO_BASEMAP_KEY: ${{ secrets.CARTO_BASEMAP_KEY }}
-        run: python scripts/build_surf.py
-      - name: Stop if Surfline gave us nothing
-        run: |
-          python - <<'PY'
-          import json, sys
-          spots = json.load(open("surf.json", encoding="utf-8"))
-          ok = sum(1 for s in spots if s.get("rating"))
-          print(f"{ok} of {len(spots)} spots have a rating")
-          print(open("surf_notes.txt", encoding="utf-8").read())
-          sys.exit(0 if ok >= 3 else 1)
-          PY
-      - name: Collect the page
-        run: |
-          mkdir -p site/map
-          cp kauai_surf_cards.html site/index.html
-          cp surf.json site/surf.json
-          cp kauai_surf_map.html site/map/index.html
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: surf-live/site
-
   deploy:
-    needs: build
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: surf-live/site
       - id: deployment
         uses: actions/deploy-pages@v4
