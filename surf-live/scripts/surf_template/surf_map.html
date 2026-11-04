@@ -32,6 +32,17 @@ button{font:inherit;color:inherit}
 #legend i{width:11px;height:11px;border-radius:50%;display:inline-block}
 #legend .st{color:var(--slate)}
 
+/* freshness pill: how current the data is, at a glance */
+#fresh{position:absolute;top:12px;right:12px;z-index:900;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.97);border:1px solid var(--line);border-radius:999px;padding:0 14px 0 12px;min-height:42px;font-size:14px;font-weight:700;color:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,.2);max-width:calc(100% - 150px);white-space:nowrap}
+#fresh i{flex:none;width:10px;height:10px;border-radius:50%;background:#1E8E4F;box-shadow:0 0 0 0 rgba(30,142,79,.5);animation:kcpulse 2.4s ease-out infinite}
+#fresh span{overflow:hidden;text-overflow:ellipsis}
+#fresh small{font-size:12.5px;font-weight:600;color:var(--slate)}
+#fresh.aging i{background:#D49A00;animation:none}
+#fresh.stale{background:#FFF1EE;border-color:#E9B4AA}
+#fresh.stale i{background:#C0392B;animation:none}
+@keyframes kcpulse{70%{box-shadow:0 0 0 7px rgba(30,142,79,0)}100%{box-shadow:0 0 0 0 rgba(30,142,79,0)}}
+@media (max-width:420px){#fresh small{display:none}}
+
 /* side panel */
 #panel{position:absolute;top:0;left:0;bottom:0;width:390px;max-width:100%;z-index:1000;background:var(--paper);box-shadow:4px 0 24px rgba(0,0,0,.25);transform:translateX(-102%);transition:transform .28s ease;display:flex;flex-direction:column;visibility:hidden}
 #panel.open{transform:none;visibility:visible}
@@ -101,6 +112,7 @@ dd span{display:block;color:var(--slate);font-size:12.5px}
 <div id="app">
   <div id="map" aria-label="Map of Kauaʻi surf spots"></div>
   <button id="openlist" type="button" aria-controls="panel">☰ Spots</button>
+  <div id="fresh" role="status"><i aria-hidden="true"></i><span id="fresh-t"></span></div>
   <div id="legend"><ul id="lg" aria-label="Rating colours"></ul><div class="st" id="stamp"></div></div>
   <aside id="panel" aria-label="Surf spot information">
     <div id="v-list" style="display:flex;flex-direction:column;min-height:0;flex:1">
@@ -230,6 +242,17 @@ $('#lg').innerHTML=SCALE.concat([FLAT]).map(function(l){return '<li><i style="ba
 var g=new Date(KC.generated),ago=(Date.now()-g.getTime())/36e5;
 var f=new Intl.DateTimeFormat('en-US',{timeZone:'Pacific/Honolulu',weekday:'short',hour:'numeric',minute:'2-digit'}).format(g).replace(' AM',' am').replace(' PM',' pm');
 $('#stamp').textContent='Updated '+f+' Hawaiʻi time'+(!KC.sample&&ago>2.5?' (about '+Math.round(ago)+' h old)':'')+(KC.sample?' · preview':'');
+/* freshness pill: "Updated 12 min ago · 9:01 am", re-counted every minute; amber after 1.5 h, red after 3 h */
+function freshness(){
+  var el=$('#fresh'),m=Math.max(0,Math.round((Date.now()-g.getTime())/6e4)),h=m/60;
+  var rel=m<1?'just now':m<60?m+' min ago':h<24?Math.floor(h)+' h'+(m%60&&h<6?' '+(m%60)+' min':'')+' ago':Math.floor(h/24)+(h<48?' day':' days')+' ago';
+  var day=function(d){return new Intl.DateTimeFormat('en-US',{timeZone:'Pacific/Honolulu',year:'numeric',month:'numeric',day:'numeric'}).format(d);};
+  var clock=new Intl.DateTimeFormat('en-US',day(g)===day(new Date())?{timeZone:'Pacific/Honolulu',hour:'numeric',minute:'2-digit'}:{timeZone:'Pacific/Honolulu',weekday:'short',hour:'numeric',minute:'2-digit'}).format(g).replace(' AM',' am').replace(' PM',' pm');
+  el.className=KC.sample?'aging':h>3?'stale':h>1.5?'aging':'';
+  $('#fresh-t').innerHTML=KC.sample?'Preview data, not live':'Updated '+rel+' <small>· '+esc(clock)+'</small>'+(h>3?' <small>· may be out of date</small>':'');
+  el.title='Surf data updated '+f+' Hawaiʻi time';
+}
+freshness();setInterval(freshness,60000);
 drawMarkers();renderList();
 })();
 </script>
