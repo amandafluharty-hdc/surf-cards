@@ -315,12 +315,34 @@ def load_spots(path):
     return spots
 
 
+def fetch_wave(sp, notes):
+    """Surf height ('surf' endpoint) + swell lines ('swells' endpoint), merged by timestamp into the shape the old
+    'wave' endpoint returned: {'associated': {'units': {...}}, 'data': {'wave': [{'timestamp', 'surf', 'swells'}]}}.
+    Returns None if both requests fail."""
+    got = {}
+    for kind in ("surf", "swells"):
+        try:
+            got[kind] = get_json(SL + kind, dict({"spotId": sp["id"], "days": 1, "intervalHours": 1}, **UNITS))
+        except Exception as e:
+            notes.append(f"{sp['name']}: {kind} request failed ({e})")
+        time.sleep(1.0)
+    if not got:
+        return None
+    units, rows = {}, {}
+    for kind, d in got.items():
+        units.update(pick(d, "associated", "units") or {})
+        for x in pick(d, "data", kind) or []:
+            if isinstance(x, dict) and x.get("timestamp") is not None:
+                rows.setdefault(x["timestamp"], {"timestamp": x["timestamp"]})[kind] = x.get(kind)
+    # swell heights are converted with the waveHeight factor in parse_spot; both are requested in FT
+    return {"associated": {"units": units}, "data": {"wave": [rows[t] for t in sorted(rows)]}}
+
+
 def fetch_all(spots, debug=False):
     now = datetime.now(HST)
     now_ts = int(time.time())
     raw_all, notes = {}, []
-    WAVE_TRIES = [(1, 1, UNITS), (1, 3, UNITS), (5, 3, {})]     # (days, interval hours, unit params)
-    wave_cfg, wave_dead, first_wave, first_report = None, False, None, None
+    wave_ok, wave_dead, first_wave, first_report = False, False, None, None
     for i, sp in enumerate(spots, 1):
         raw = {}
         for kind in ("rating", "wind", "weather"):
@@ -329,28 +351,20 @@ def fetch_all(spots, debug=False):
             except Exception as e:
                 notes.append(f"{sp['name']}: {kind} failed ({e})")
             time.sleep(1.0)
-        # wave endpoint (swell lines, and surf height). The first spot tries three variants; if none works the endpoint is
-        # skipped for the other spots (it returned 404 for every spot on 1 Nov 2026).
+        # surf height and swell lines. Surfline retired the combined 'wave' endpoint (404 for every spot since Nov 2026)
+        # and split it into 'surf' and 'swells'; merge them back into the old 'wave' shape so parse_spot is unchanged.
+        # If both fail for the first spot they are skipped for the rest.
         if not wave_dead:
-            for cfg in ((WAVE_TRIES if wave_cfg is None else [wave_cfg])):
-                days, iv, un = cfg
-                try:
-                    w = get_json(SL + "wave", dict({"spotId": sp["id"], "days": days, "intervalHours": iv}, **un))
-                except Exception as e:
-                    notes.append(f"{sp['name']}: wave request (days={days}, every {iv}h{'' if un else ', no units'}) failed ({e})")
-                    w = None
-                time.sleep(1.0)
-                if w is not None:
-                    raw["wave"] = w
-                    if i == 1:
-                        first_wave = w
-                    pw = parse_spot(sp, {"wave": w}, now_ts)
-                    if pw["surf"] or pw["swells"]:
-                        wave_cfg = cfg
-                        break
-            if i == 1 and wave_cfg is None:
+            w = fetch_wave(sp, notes)
+            if w is not None:
+                raw["wave"] = w
+                if i == 1:
+                    first_wave = w
+                pw = parse_spot(sp, {"wave": w}, now_ts)
+                wave_ok = wave_ok or bool(pw["surf"] or pw["swells"])
+            if i == 1 and not wave_ok:
                 wave_dead = True
-                notes.append("The wave endpoint is not available, so it is skipped for the other spots. Swell lines will come from the spot report if it has them.")
+                notes.append("The surf and swells endpoints are not available, so they are skipped for the other spots. Swell lines will come from the spot report if it has them.")
         parsed = parse_spot(sp, raw, now_ts)
         if not parsed["surf"] or not parsed["swells"]:   # fallback: the spot report (current surf height, description, swells)
             try:
